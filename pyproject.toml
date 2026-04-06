@@ -1,0 +1,16 @@
+[project]
+name = "wordpuzzle-openenv"
+version = "1.0.0"
+description = "WordPuzzle — A Wordle-style mini-game RL environment"
+requires-python = ">=3.13"
+dependencies = [
+    "openai",
+    "openenv-core>=0.2.0",
+]
+
+[project.scripts]
+server = "app:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.backends.legacy:build"
