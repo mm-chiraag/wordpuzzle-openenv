@@ -1,10 +1,9 @@
 """
 inference.py — WordPuzzle LLM Baseline Agent
 Uses OpenAI client with structured stdout logs: [START] [STEP] [END]
-Required env vars: API_BASE_URL, MODEL_NAME, HF_TOKEN
+Required env vars: API_BASE_URL, API_KEY, MODEL_NAME
 """
 import os
-import json
 import time
 import requests
 import sys
@@ -13,16 +12,20 @@ from openai import OpenAI
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:7860")
-MODEL_NAME   = os.environ.get("MODEL_NAME",   "gpt-3.5-turbo")
-HF_TOKEN     = os.environ.get("HF_TOKEN",     "")
-ENV_URL      = os.environ.get("ENV_URL",       API_BASE_URL)
+API_KEY      = os.environ.get("API_KEY", os.environ.get("HF_TOKEN", "dummy"))
+MODEL_NAME   = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
+ENV_URL      = os.environ.get("ENV_URL", API_BASE_URL)
 
 TASKS = ["wordpuzzle-easy", "wordpuzzle-medium", "wordpuzzle-hard"]
 
+# ─── OpenAI client using injected API_BASE_URL and API_KEY ───────────────────
+base_url = API_BASE_URL.rstrip("/")
+if not base_url.endswith("/v1"):
+    base_url = base_url + "/v1"
+
 client = OpenAI(
-    api_key=HF_TOKEN or "dummy",
-    base_url=API_BASE_URL if API_BASE_URL.endswith("/v1") else API_BASE_URL + "/v1"
-    if "openai" not in API_BASE_URL else API_BASE_URL,
+    api_key=API_KEY,
+    base_url=base_url,
 )
 
 
