@@ -1,7 +1,7 @@
 """
 inference.py — WordPuzzle LLM Baseline Agent
 Uses OpenAI client with structured stdout logs: [START] [STEP] [END]
-Required env vars: API_BASE_URL, API_KEY, MODEL_NAME
+Required env vars: API_BASE_URL, API_KEY, MODEL_NAME, ENV_URL
 """
 import os
 import time
@@ -11,25 +11,22 @@ import sys
 from openai import OpenAI
 
 # ─── Config ───────────────────────────────────────────────────────────────────
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:7860")
-API_KEY      = os.environ.get("API_KEY", os.environ.get("HF_TOKEN", "dummy"))
+# Injected by hackathon checker — use exactly as provided
+API_BASE_URL = os.environ["API_BASE_URL"]
+API_KEY      = os.environ["API_KEY"]
 MODEL_NAME   = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
-ENV_URL      = os.environ.get("ENV_URL", API_BASE_URL)
+ENV_URL      = os.environ.get("ENV_URL", "http://localhost:7860")
 
 TASKS = ["wordpuzzle-easy", "wordpuzzle-medium", "wordpuzzle-hard"]
 
-# ─── OpenAI client using injected API_BASE_URL and API_KEY ───────────────────
-base_url = API_BASE_URL.rstrip("/")
-if not base_url.endswith("/v1"):
-    base_url = base_url + "/v1"
-
+# ─── OpenAI client — use API_BASE_URL exactly as injected ────────────────────
 client = OpenAI(
     api_key=API_KEY,
-    base_url=base_url,
+    base_url=API_BASE_URL,
 )
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── Game server helpers ──────────────────────────────────────────────────────
 def env_reset(task_id: str, session_id: str) -> dict:
     r = requests.post(f"{ENV_URL}/reset",
                       json={"task_id": task_id, "session_id": session_id},
@@ -67,21 +64,19 @@ Your guess:"""
 
 
 def get_llm_guess(prompt: str) -> str:
-    try:
-        resp = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=10,
-            temperature=0.3,
-        )
-        raw = resp.choices[0].message.content.strip().lower()
-        return "".join(c for c in raw if c.isalpha())
-    except Exception as e:
-        print(f"[LLM ERROR] {e}", file=sys.stderr)
-        return "crane"   # fallback
+    # NO silent fallback — must call through the proxy
+    resp = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=10,
+        temperature=0.3,
+    )
+    raw = resp.choices[0].message.content.strip().lower()
+    result = "".join(c for c in raw if c.isalpha())
+    return result if result else "crane"
 
 
-# ─── Main loop ────────────────────────────────────────────────────────────────
+# ─── Task runner ─────────────────────────────────────────────────────────────
 def run_task(task_id: str) -> dict:
     session_id = f"inference-{task_id}-{int(time.time())}"
 
@@ -93,15 +88,11 @@ def run_task(task_id: str) -> dict:
     done         = False
     solved       = False
 
-    # ── [START] block ──
     print(f"[START] task={task_id}", flush=True)
 
     while not done:
         prompt = build_prompt(obs, task_id)
         guess  = get_llm_guess(prompt)
-
-        if not guess:
-            guess = "crane"
 
         step_result   = env_step(guess, session_id)
         obs           = step_result.get("observation", {})
@@ -111,19 +102,16 @@ def run_task(task_id: str) -> dict:
         steps        += 1
         solved        = obs.get("solved", False)
 
-        # ── [STEP] block ──
         print(f"[STEP] step={steps} action={guess} reward={round(reward, 4)}", flush=True)
 
     score = min(1.0, total_reward)
-
-    # ── [END] block ──
     print(f"[END] task={task_id} score={round(score, 4)} steps={steps}", flush=True)
 
     return {"task_id": task_id, "score": score, "solved": solved, "steps": steps}
 
 
 def main():
-    print(f"[INFO] ENV_URL={ENV_URL}  MODEL={MODEL_NAME}", file=sys.stderr)
+    print(f"[INFO] ENV_URL={ENV_URL} API_BASE_URL={API_BASE_URL} MODEL={MODEL_NAME}", file=sys.stderr)
     results = []
     for task_id in TASKS:
         try:
@@ -131,7 +119,6 @@ def main():
             results.append(r)
         except Exception as e:
             print(f"[ERROR] {task_id}: {e}", file=sys.stderr)
-            # Still print [START] and [END] so validator doesn't fail
             print(f"[START] task={task_id}", flush=True)
             print(f"[STEP] step=1 action=crane reward=0.0", flush=True)
             print(f"[END] task={task_id} score=0.0 steps=1", flush=True)
