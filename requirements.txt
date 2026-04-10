@@ -1,2 +1,0 @@
-# No external dependencies needed — the file is fully self-contained
-# Add packages here only if you extend the environment later
