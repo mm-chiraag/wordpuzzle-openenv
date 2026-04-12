@@ -24,12 +24,12 @@ def clamp_score(score):
     try:
         score = float(score)
     except:
-        return 0.1
+        return 0
 
     if score <= 0:
-        return 0.1
+        return 0
     if score >= 1:
-        return 0.9
+        return 1
 
     return score
 
@@ -104,7 +104,7 @@ async def step(request: Request):
     try:
         obs, reward, done = env.step(action)
     except:
-        return {"reward": 0.1, "done": True}
+        return {"reward": 0, "done": True}
 
     if done:
         env_sessions.pop(session_id, None)
@@ -134,7 +134,7 @@ async def grader(request: Request):
         env._target_word = WORDS[level][0]
 
     if not guess or len(guess) != word_len:
-        return {"score": 0.1, "valid": False}
+        return {"score": 0, "valid": False}
 
     raw = env._compute_reward(guess, env._target_word, 1)
 
