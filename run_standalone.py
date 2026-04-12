@@ -67,7 +67,7 @@ class WordPuzzleEnvironment:
         self._feedback: List[str] = []
         self._done: bool = False
         self._solved: bool = False
-        self._total_reward: float = 0.0
+        self._total_reward: float = 0
 
     def _pick_word(self) -> str:
         return random.choice(WORDS[self.task_level])
@@ -108,10 +108,10 @@ class WordPuzzleEnvironment:
             return round(min(0.98, max(0.50, bonus)), 4)
 
         target_chars = list(target)
-        score = 0.0
+        score = 0
         for i, g in enumerate(guess):
             if i < len(target) and g == target[i]:
-                score += 1.0 / self.word_length
+                score += 1 / self.word_length
                 target_chars[i] = None
             elif g in target_chars:
                 score += 0.3 / self.word_length
@@ -130,7 +130,7 @@ class WordPuzzleEnvironment:
         self._feedback = []
         self._done = False
         self._solved = False
-        self._total_reward = 0.0
+        self._total_reward = 0
         return WordPuzzleObservation(
             feedback=[],
             attempts_used=0,
