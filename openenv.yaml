@@ -1,5 +1,0 @@
-name: wordpuzzle-openenv
-version: 0.1.0
-entrypoint: server.app:app
-type: http
-spec_version: "1.0"
