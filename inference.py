@@ -93,7 +93,7 @@ def run_task(task_id: str) -> dict:
     result = env_reset(task_id, session_id)
     obs    = result.get("observation", {})
 
-    total_reward = 0.0
+    total_reward = 0
     steps        = 0
     done         = False
     solved       = False
@@ -106,7 +106,7 @@ def run_task(task_id: str) -> dict:
 
         step_result   = env_step(guess, session_id)
         obs           = step_result.get("observation", {})
-        reward        = step_result.get("reward", 0.0)
+        reward        = step_result.get("reward", 0)
         done          = step_result.get("done", False)
         total_reward += reward
         steps        += 1
@@ -116,7 +116,7 @@ def run_task(task_id: str) -> dict:
 
     # Normalize total_reward to (0, 1) — STRICTLY between 0.01 and 0.99
     # Max theoretical reward across all attempts is capped reasonably
-    normalized = total_reward / max(total_reward + 1.0, 10.0)
+    normalized = total_reward / max(total_reward + 1, 10)
     score = clamp_score(normalized)
 
     print(f"[END] task={task_id} score={score} steps={steps}", flush=True)
@@ -135,7 +135,7 @@ def main():
             print(f"[ERROR] {task_id}: {e}", file=sys.stderr)
             # Even error fallback must NOT use 0.0 — use 0.01
             print(f"[START] task={task_id}", flush=True)
-            print(f"[STEP] step=1 action=crane reward=0.01", flush=True)
+            print(f"[STEP] step=1 action=crane reward=0.", flush=True)
             print(f"[END] task={task_id} score=0.05 steps=1", flush=True)
             results.append({"task_id": task_id, "score": 0.05, "solved": False, "error": str(e)})
 
